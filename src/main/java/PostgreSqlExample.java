@@ -8,7 +8,7 @@ package main.java;
 
 public class PostgreSqlExample {
     public static void main(String[] args) {
-        try (Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/abbameldanext", "", "")) {
+        try (Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/abbameldanext", "abba", "abba")) {
 
             System.out.println("Java JDBC PostgreSQL Example");
             // When this class first attempts to establish a connection, it automatically loads any JDBC 4.0 drivers found within

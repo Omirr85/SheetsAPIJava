@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<reports>
+    <report>
+        <entry>
+            <key>getUser</key>
+            <value><![CDATA[
+SELECT *
+FROM USERS
+WHERE ID = ?
+            ]]></value>
+        </entry>
+        <entry>
+            <key>getSpecialCodeByUserId</key>
+            <value><![CDATA[
+SELECT u.EMAIL, p.ID as PROFILEID, p.SPECIALCODE, a.MANAGERID
+FROM USERS u
+  LEFT JOIN PROFILE p ON p.USERID = u.ID
+  LEFT JOIN ACCOUNT a ON a.PROFILEID = p.ID
+WHERE u.ID = ?  ]]></value>
+        </entry>
+    </report>
+</reports>
