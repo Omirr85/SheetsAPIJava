@@ -1,5 +1,6 @@
 package com.company;
 
+import bin.reports.ReportQueue;
 import bin.sql.DatabaseConnection;
 import bin.xml.XMLNode;
 import bin.xml.XMLParser;
@@ -16,8 +17,11 @@ public class Main {
     public static void main(String[] args) throws IOException, GeneralSecurityException {
 
 
-        DatabaseConnection dcon = new DatabaseConnection();
-        Connection c = dcon.getConnection();
+        /*DatabaseConnection dcon = new DatabaseConnection();
+        Connection c = dcon.getConnection();*/
+
+        ReportQueue queue = new ReportQueue();
+        queue.Start();
 
         /*
 
