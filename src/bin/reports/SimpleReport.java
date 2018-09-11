@@ -13,14 +13,7 @@ public class SimpleReport extends BaseReport {
 
         helper.CreateTodaySheet(report.getSpreadsheetId(), report.getMaxSheets());
 
-
-        // create todaysheet using the maxsheets var
-
-        //
-
-
-        //Rapport gemaakt op 26/07/2018 10:56:50 op Productie
-        //helper.CreateSheetOrReplace(report.getSpreadsheetId(), "11/09/2018");
+        // modify WriteRange to write to todayssheet if needed
         helper.WriteRange(results, report.getSpreadsheetId(), "11/09/2018!A3");
     }
 }
