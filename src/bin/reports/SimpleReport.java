@@ -7,12 +7,20 @@ import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.List;
 
-public class DefaultReport extends BaseReport {
+public class SimpleReport extends BaseReport {
     public static void DoReport(Report report, SheetsHelper helper) throws SQLException, GeneralSecurityException, IOException {
         List<List<Object>> results = GetQueryResult(report.getSql());
 
+        helper.CreateTodaySheet(report.getSpreadsheetId(), report.getMaxSheets());
+
+
+        // create todaysheet using the maxsheets var
+
+        //
+
+
         //Rapport gemaakt op 26/07/2018 10:56:50 op Productie
-        helper.WriteRange(results, report.getSheet(), "Test!A3");
-        helper.CreateSheet(results, report.getSheet(), "24/08/2018");
+        //helper.CreateSheetOrReplace(report.getSpreadsheetId(), "11/09/2018");
+        helper.WriteRange(results, report.getSpreadsheetId(), "11/09/2018!A3");
     }
 }

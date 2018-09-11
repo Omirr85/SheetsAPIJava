@@ -33,7 +33,7 @@ public class ReportQueue {
         switch(report.getType()) {
             case ("default") :
                 try {
-                    DefaultReport.DoReport(report, helper);
+                    SimpleReport.DoReport(report, helper);
                 } catch (SQLException e) {
 
                     e.printStackTrace();

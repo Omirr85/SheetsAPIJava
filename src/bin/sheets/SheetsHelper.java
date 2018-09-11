@@ -18,10 +18,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.GeneralSecurityException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.*;
+
+import static java.util.stream.Collectors.*;
 
 
 public class SheetsHelper {
@@ -62,10 +65,6 @@ public class SheetsHelper {
         return credential;
     }
 
-    /**
-     * Prints the names and majors of students in a sample spreadsheet:
-     * https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-     */
     public void WriteRange(List<List<Object>> table, String sheetId, String writeRange) throws GeneralSecurityException, IOException {
         Sheets service = getService();
         ValueRange vr = new ValueRange().setValues(table).setMajorDimension("ROWS");
@@ -75,20 +74,45 @@ public class SheetsHelper {
                 .execute();
     }
 
-    private void CreateSheet(String sheetId, String sheetName) throws GeneralSecurityException, IOException {
+    public void CreateTodaySheet(String spreadsheetId, int maxSheets) throws GeneralSecurityException, IOException, DateTimeParseException {
+        Sheets service = getService();
+
+        List<Sheet> list = service.spreadsheets().get(spreadsheetId).execute().getSheets();
+        List<String> dateStrings = list.stream().filter(s -> !s.getProperties().getTitle().equals("Historiek")).map(s -> s.getProperties().getTitle()).collect(toList());
+
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        List<LocalDate> dates = dateStrings.stream().map(x -> LocalDate.parse(x, dateFormatter)).sorted().collect(toList());
+
+        while (dates.size() > maxSheets)
+        {
+            LocalDate date = dates.get(0);
+            DeleteSheetByName(spreadsheetId, date.format(dateFormatter));
+            dates.remove(date);
+        }
+
+        String todaySheetName = LocalDate.now().format(dateFormatter);
+        CreateSheetOrReplace(spreadsheetId, todaySheetName);
+
+        List<List<Object>> table = Collections.singletonList(Collections.singletonList(
+            ("Rapport gemaakt op " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")))));
+        WriteRange(table, spreadsheetId, todaySheetName + "!A1");
+    }
+
+    private void CreateSheetOrReplace(String spreadsheetId, String sheetName) throws GeneralSecurityException, IOException {
+        DeleteSheetByName(spreadsheetId, sheetName);
+
         Sheets service = getService();
         AddSheetRequest addSheetRequest = new AddSheetRequest();
         addSheetRequest.setProperties(new SheetProperties().setTitle(sheetName));
 
         BatchUpdateSpreadsheetRequest request = new BatchUpdateSpreadsheetRequest();
-        request.setRequests(Arrays.asList(new Request().setAddSheet(addSheetRequest)));
+        request.setRequests(Collections.singletonList(new Request().setAddSheet(addSheetRequest)));
 
-        service.spreadsheets().batchUpdate(sheetId,request).execute();
+        service.spreadsheets().batchUpdate(spreadsheetId,request).execute();
     }
 
     private void DeleteSheetByName(String spreadsheetId, String sheetName) throws GeneralSecurityException, IOException {
         Sheets service = getService();
-        //Test
 
         List<Sheet> list = service.spreadsheets().get(spreadsheetId).execute().getSheets();
         Optional<Sheet> sheet = list.stream().filter(s -> s.getProperties().getTitle().equals(sheetName)).findFirst();
@@ -105,18 +129,19 @@ public class SheetsHelper {
         deleteSheetRequest.setSheetId(sheetId);
 
         BatchUpdateSpreadsheetRequest request = new BatchUpdateSpreadsheetRequest();
-        request.setRequests(Arrays.asList(new Request().setDeleteSheet(deleteSheetRequest)));
+        request.setRequests(Collections.singletonList(new Request().setDeleteSheet(deleteSheetRequest)));
 
         service.spreadsheets().batchUpdate(spreadsheetId,request).execute();
     }
 
     private Sheets getService() throws GeneralSecurityException, IOException {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        Sheets service = new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+        return new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
                 .setApplicationName(APPLICATION_NAME)
                 .build();
-        return service;
     }
+
+
 
 /*
     public static void main(String... args) throws IOException, GeneralSecurityException {
