@@ -4,6 +4,7 @@ import bin.xml.XMLNode;
 import bin.xml.XMLParser;
 
 import java.util.ArrayList;
+import java.util.Optional;
 
 public class ReportFactory {
     public static final String reportsPath = "/resources/reports.xml";
@@ -21,11 +22,37 @@ public class ReportFactory {
     }
 
     private static Report BuildReport(XMLNode reportNocde) {
-        String name = reportNocde.GetChild("name").getContent();
-        String sheet = reportNocde.GetChild("sheet").getContent();
-        String historycheck = reportNocde.GetChild("historycheck").getContent();
-        String sql = reportNocde.GetChild("sql").getContent();
-        String type = reportNocde.getAttributes().get("type");
-        return new Report(type, name, sheet, historycheck == "1" ? true : false, sql);
+        try {
+            String name = reportNocde.GetChild("name").getContent();
+            String sheet = reportNocde.GetChild("sheet").getContent();
+            String sql = reportNocde.GetChild("sql").getContent();
+            String type = reportNocde.getAttributes().get("type");
+
+            XMLNode historycheckNode = reportNocde.GetChild("historycheck");
+            String historycheck = "";
+            if (historycheckNode != null)
+                historycheck = historycheckNode.getContent();
+
+            XMLNode comparetozeroNode = reportNocde.GetChild("comparetozero");
+            String comparetozero = "";
+            if (comparetozeroNode != null)
+                comparetozero = comparetozeroNode.getContent();
+
+            XMLNode comparehigherkNode = reportNocde.GetChild("comparehigher");
+            String comparehigher = "";
+            if (comparehigherkNode != null)
+                comparehigher = comparehigherkNode.getContent();
+
+            return new Report(type, name, sheet
+                    , historycheck == "1" ? true : false
+                    , comparehigher == "1" ? true : false
+                    , comparetozero == "1" ? true : false
+                    , sql);
+        }
+        catch (NullPointerException ex) {
+            System.out.println("XML Error");
+            ex.printStackTrace();
+        }
+        return null;
     }
 }

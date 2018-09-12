@@ -1,11 +1,13 @@
 package bin.reports;
 
 public class Report {
-    public Report(String type, String name, String sheet, Boolean historycheck, String sql) {
+    public Report(String type, String name, String sheet, boolean historycheck, boolean comparehigher, Boolean comparetozero, String sql) {
         this.type = type;
         this.name = name;
         this.spreadsheet = sheet;
         this.historycheck = historycheck;
+        this.comparehigher = comparehigher;
+        this.comparetozero = comparetozero;
         this.sql = sql;
         this.maxSheets = 5;
     }
@@ -15,6 +17,8 @@ public class Report {
     private String name;
     private String spreadsheet;
     private Boolean historycheck = false;
+    private Boolean comparehigher = false;
+    private Boolean comparetozero = false;
     private String sql;
     private int maxSheets;
 
@@ -30,9 +34,11 @@ public class Report {
         return spreadsheet;
     }
 
-    public Boolean getHistorycheck() {
-        return historycheck;
-    }
+    public Boolean getHistorycheck() { return historycheck; }
+
+    public Boolean getComparetozero() { return comparetozero; }
+
+    public Boolean getComparehigher() { return comparehigher; }
 
     public String getSql() {
         return sql;

@@ -35,7 +35,6 @@ public class ReportQueue {
                 try {
                     SimpleReport.DoReport(report, helper);
                 } catch (SQLException e) {
-
                     e.printStackTrace();
                 } catch (GeneralSecurityException e) {
                     e.printStackTrace();

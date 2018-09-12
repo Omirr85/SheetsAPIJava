@@ -1,8 +1,11 @@
 package bin.reports;
 
 import bin.sql.DatabaseConnection;
+import com.google.api.client.util.DateTime;
 
 import java.sql.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,12 +16,7 @@ public class BaseReport {
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(sql);
             List<List<Object>> results = resultSetToArrays(resultSet);
-
-            for (List<Object> row : results) {
-                for (Object item : row) {
-                    System.out.println(item);
-                }
-            }
+            System.out.println("fetched " + results.size() + " results");
 
             return results;
         }
@@ -41,7 +39,11 @@ public class BaseReport {
         while(resultSet.next()) {
             List<Object> row = new ArrayList<>();
             for (int i = 1; i <= columnCount; ++i) {
-                row.add(resultSet.getObject(i));
+                Object o = resultSet.getObject(i);
+                if (o instanceof Timestamp)
+                    row.add(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss").format(((Timestamp) o).toLocalDateTime()));
+                else
+                    row.add(o == null ? "" : o);
             }
             list.add(row);
         }

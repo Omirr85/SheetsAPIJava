@@ -65,28 +65,26 @@ public class SheetsHelper {
         return credential;
     }
 
-    public void WriteRange(List<List<Object>> table, String sheetId, String writeRange) throws GeneralSecurityException, IOException {
-        Sheets service = getService();
-        ValueRange vr = new ValueRange().setValues(table).setMajorDimension("ROWS");
-        service.spreadsheets().values()
-                .update(sheetId, writeRange, vr)
-                .setValueInputOption("RAW")
-                .execute();
-    }
-
     public void CreateTodaySheet(String spreadsheetId, int maxSheets) throws GeneralSecurityException, IOException, DateTimeParseException {
         Sheets service = getService();
 
         List<Sheet> list = service.spreadsheets().get(spreadsheetId).execute().getSheets();
         List<String> dateStrings = list.stream().filter(s -> !s.getProperties().getTitle().equals("Historiek")).map(s -> s.getProperties().getTitle()).collect(toList());
 
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("d/MM/yyyy");
         List<LocalDate> dates = dateStrings.stream().map(x -> LocalDate.parse(x, dateFormatter)).sorted().collect(toList());
+        dates.add(LocalDate.now());
+        dates = dates.stream().distinct().collect(toList());
 
         while (dates.size() > maxSheets)
         {
             LocalDate date = dates.get(0);
-            DeleteSheetByName(spreadsheetId, date.format(dateFormatter));
+            try {
+                DeleteSheetByName(spreadsheetId, date.format(dateFormatter));
+            } catch (Exception e){
+                System.out.println("Could not delete the oldest tab" );
+                e.printStackTrace();
+            }
             dates.remove(date);
         }
 
@@ -141,31 +139,44 @@ public class SheetsHelper {
                 .build();
     }
 
+    public void WriteRange(List<List<Object>> table, String spreadsheetId, String cellrange, boolean writeTodaySheet) throws GeneralSecurityException, IOException {
+        WriteRange(table, spreadsheetId, LocalDate.now().format(DateTimeFormatter.ofPattern("d/MM/yyyy")) + "!" + cellrange);
+    }
 
+    public void WriteRange(List<List<Object>> table, String spreadsheetId, String writeRange) throws GeneralSecurityException, IOException {
+        Sheets service = getService();
+        ValueRange vr = new ValueRange().setValues(table).setMajorDimension("ROWS");
+        service.spreadsheets().values()
+                .update(spreadsheetId, writeRange, vr)
+                .setValueInputOption("RAW") //.setValueInputOption(raw ? "RAW" : "USER_ENTERED")
+                .execute();
+    }
 
-/*
-    public static void main(String... args) throws IOException, GeneralSecurityException {
-        // Build a new authorized API client service.
-        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        final String spreadsheetId = "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms";
-        final String range = "Class Data!A2:E";
-        Sheets service = new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
-                .setApplicationName(APPLICATION_NAME)
-                .build();
+    public List<List<Object>> ReadRange(String spreadsheetId, String readRange) throws GeneralSecurityException, IOException {
+        Sheets service = getService();
         ValueRange response = service.spreadsheets().values()
-                .get(spreadsheetId, range)
+                .get(spreadsheetId, readRange)
                 .execute();
         List<List<Object>> values = response.getValues();
-        if (values == null || values.isEmpty()) {
-            System.out.println("No data found.");
-        } else {
-            System.out.println("Name, Major");
-            for (List row : values) {
-                // Print columns A and E, which correspond to indices 0 and 4.
-                System.out.printf("%s, %s\n", row.get(0), row.get(4));
+        return values;
+    }
+
+    public int GetFirstEmptyRow (String spreadsheetId, String sheet, int startRow) throws GeneralSecurityException, IOException {
+        int maxRows = 200;
+        int countRow = 0;
+
+        List<List<Object>> table = ReadRange(spreadsheetId, sheet + "!A" + startRow + ":A" + (maxRows+startRow-1));
+        while(table.size() == maxRows) {
+            countRow++;
+            table = ReadRange(spreadsheetId, sheet + "!A" + (startRow + countRow * maxRows) + ":A" + (maxRows - 1 + startRow + countRow * maxRows));
+        }
+        for (List row : table) {
+            if (row.isEmpty()) {
+                return table.indexOf(row) + countRow * maxRows + startRow;
             }
         }
+
+        return table.size() + countRow * maxRows + startRow;
     }
-    */
 }
 
