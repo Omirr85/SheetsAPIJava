@@ -197,5 +197,29 @@ public class SheetsHelper {
 
         return table.size() + countRow * maxRows + startRow;
     }
+
+    public void DeleteAllButXColumns(String spreadsheetId, String sheetName, int size) throws GeneralSecurityException, IOException {
+        Sheets service = getService();
+
+        List<Sheet> list = service.spreadsheets().get(spreadsheetId).execute().getSheets();
+        Optional<Sheet> sheet = list.stream().filter(s -> s.getProperties().getTitle().equals(sheetName)).findFirst();
+        if (!sheet.isPresent())
+            return;
+
+        BatchUpdateSpreadsheetRequest content = new BatchUpdateSpreadsheetRequest();
+        DimensionRange dimRange = new DimensionRange();
+        dimRange.setDimension("COLUMNS");
+        dimRange.setStartIndex(size);
+        dimRange.setEndIndex(26);
+        dimRange.setSheetId(sheet.get().getProperties().getSheetId());
+
+        DeleteDimensionRequest delDimRequest = new DeleteDimensionRequest();
+        delDimRequest.setRange(dimRange);
+
+        BatchUpdateSpreadsheetRequest request = new BatchUpdateSpreadsheetRequest();
+        request.setRequests(Collections.singletonList(new Request().setDeleteDimension(delDimRequest)));
+
+        service.spreadsheets().batchUpdate(spreadsheetId,request).execute();
+    }
 }
 
