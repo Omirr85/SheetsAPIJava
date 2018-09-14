@@ -44,9 +44,9 @@ public class ReportFactory {
                 comparehigher = comparehigherkNode.getContent();
 
             return new Report(type, name, sheet
-                    , historycheck == "1" ? true : false
-                    , comparehigher == "1" ? true : false
-                    , comparetozero == "1" ? true : false
+                    , historycheck.equals("1") ? true : false
+                    , comparehigher.equals("1") ? true : false
+                    , comparetozero.equals("1") ? true : false
                     , sql);
         }
         catch (NullPointerException ex) {

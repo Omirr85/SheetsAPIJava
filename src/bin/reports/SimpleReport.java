@@ -25,5 +25,9 @@ public class SimpleReport extends BaseReport {
                         LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")),String.valueOf(results.size()))),
                 report.getSpreadsheetId(),
                 "Historiek!A" + firstEmptyRow);
+
+        // always end with summary report
+        Summarizer.SummarizeReport(report, helper, results.size());
     }
+
 }

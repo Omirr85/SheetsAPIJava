@@ -65,6 +65,23 @@ public class SheetsHelper {
         return credential;
     }
 
+    public void GetTodaySheetForSummary(String spreadsheetId) throws GeneralSecurityException, IOException, DateTimeParseException {
+        // check if today sheet exists
+        Sheets service = getService();
+        String todaySheetName = LocalDateTime.now().format(DateTimeFormatter.ofPattern("d/MM/yyyy"));
+
+        List<Sheet> list = service.spreadsheets().get(spreadsheetId).execute().getSheets();
+        if (list.stream().filter(x -> x.getProperties().getTitle().equals(todaySheetName)).count() == 1)
+            return;
+
+        // if not, get the list of all sheets to delete and create the today sheet first (not possible to have 0 sheets)
+        List<Sheet> listToDelete = list.stream().filter(x -> !x.getProperties().getTitle().equals(todaySheetName)).collect(toList());
+        CreateSheetOrReplace(spreadsheetId, todaySheetName);
+        for (Sheet sheet : listToDelete) {
+            DeleteSheetByName(spreadsheetId, sheet.getProperties().getTitle());
+        }
+
+    }
     public void CreateTodaySheet(String spreadsheetId, int maxSheets) throws GeneralSecurityException, IOException, DateTimeParseException {
         Sheets service = getService();
 
@@ -166,6 +183,8 @@ public class SheetsHelper {
         int countRow = 0;
 
         List<List<Object>> table = ReadRange(spreadsheetId, sheet + "!A" + startRow + ":A" + (maxRows+startRow-1));
+        if (table == null)
+            return startRow;
         while(table.size() == maxRows) {
             countRow++;
             table = ReadRange(spreadsheetId, sheet + "!A" + (startRow + countRow * maxRows) + ":A" + (maxRows - 1 + startRow + countRow * maxRows));

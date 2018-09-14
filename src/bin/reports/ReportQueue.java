@@ -1,6 +1,7 @@
 package bin.reports;
 
 import bin.sheets.SheetsHelper;
+import org.mortbay.util.SingletonList;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -8,12 +9,16 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 
 public class ReportQueue {
-    private final ArrayList<Report> reportList;
+    private ArrayList<Report> reportList;
     private int iterations;
 
     public ReportQueue() {
         reportList = ReportFactory.GenerateFromXML();
         iterations = 0;
+
+        // enable testing
+        Report r = reportList.get(0);
+        reportList = new ArrayList<Report>(){{add(r);}};
     }
 
     public void Start(SheetsHelper helper) {
