@@ -18,6 +18,7 @@ public class ReportFactory {
             list.add(BuildReport(reports.getChildren().get(i)));
         }
 
+        System.out.println("XML loaded: " + list.size() + " reports ready to process");
         return list;
     }
 
@@ -38,16 +39,22 @@ public class ReportFactory {
             if (comparetozeroNode != null)
                 comparetozero = comparetozeroNode.getContent();
 
-            XMLNode comparehigherkNode = reportNocde.GetChild("comparehigher");
+            XMLNode comparehigherNode = reportNocde.GetChild("comparehigher");
             String comparehigher = "";
-            if (comparehigherkNode != null)
-                comparehigher = comparehigherkNode.getContent();
+            if (comparehigherNode != null)
+                comparehigher = comparehigherNode.getContent();
 
-            return new Report(type, name, sheet
+            Report report =  new Report(type, name, sheet
                     , historycheck.equals("1") ? true : false
                     , comparehigher.equals("1") ? true : false
-                    , comparetozero.equals("1") ? true : false
+                    , comparetozero == "1" ? true : false
                     , sql);
+
+            XMLNode maxSheetsNode = reportNocde.GetChild("maxsheets");
+            if (maxSheetsNode != null)
+                report.setMaxSheets(Integer.parseInt(maxSheetsNode.getContent()));
+
+            return report;
         }
         catch (NullPointerException ex) {
             System.out.println("XML Error");

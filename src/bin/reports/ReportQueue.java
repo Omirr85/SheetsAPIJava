@@ -26,7 +26,10 @@ public class ReportQueue {
             iterations++;
 
             for (Report report : reportList) {
+                System.out.println("Starting report: " + report.getName());
                 DoReport(report, helper);
+                if (report.isDone())
+                    System.out.println("Finished report.");
             }
             reportList.removeIf(x -> x.isDone());
         }
