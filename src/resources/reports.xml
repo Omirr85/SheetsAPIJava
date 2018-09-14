@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<reports>
+    <report type="default">
+        <name>Actieve post-its</name>
+		<sheet>1ZmjZLxCyGGysXSnCqvXm9JfIN-MARnwuTgDqLCr2SEc</sheet>	
+		<historycheck>1</historycheck>
+		<comparehigher>1</comparehigher>
+		<sql><![CDATA[
+			SELECT KEY, postit.id AS onderdeel, onderdeel.status AS onderdeel_status, COMMENT, person, creationdate, startdate, enddate
+			FROM postit 
+				LEFT JOIN onderdeel ON postit.id = onderdeel.naam_pad
+			WHERE (enddate IS NULL OR enddate > LOCALTIMESTAMP)
+			ORDER BY 2;
+		]]></sql>
+    </report>
+	<report type="default">
+        <name>Verlichtingsonderdelen met dezelfde coördinaten</name>
+		<sheet>11AhX3h75PHxPAs3gOP62zegSgpNj6OwnHJP74QPyyjA</sheet>	
+		<historycheck>1</historycheck>
+		<comparehigher>1</comparehigher>
+		<sql><![CDATA[
+			WITH t AS (
+				SELECT o.id, gps.* 
+				FROM onderdeel o 
+					LEFT JOIN gps ON o.gps_id = gps.id
+					LEFT JOIN gps gps2 ON gps.x = gps2.x AND gps.y = gps2.y
+					LEFT JOIN onderdeel o2 ON o2.gps_id = gps2.id AND o2.dtype IN (817,818,819) AND o.naam_pad <> o2.naam_pad
+				WHERE o.naam_pad NOT LIKE 'WVTEST/WV/%' AND o.dtype IN (817,818,819) AND o.gps_id IS NOT NULL AND o2.id IS NOT NULL AND o.status = 'A'),
+			u AS (
+				SELECT x, y, count(*) AS aantal_dubbel
+				FROM t 
+				GROUP BY x, y)
+			SELECT u.*, onderdeel.id, onderdeel.naam, onderdeel.naam_pad, tech_toezichter_ref, group_id, laatste_update, update_user_ref
+			FROM u 
+				LEFT JOIN gps ON gps.x = u.x AND gps.y = u.y 
+				LEFT JOIN onderdeel ON gps.id = gps_id
+			WHERE u.aantal_dubbel > 1 AND dtype IN (817,818,819) AND status = 'A'
+			ORDER BY aantal_dubbel DESC, gps.x, gps.y, naam_pad;
+		]]></sql>
+    </report>
+	<report type="default">
+        <name>Onderdelen met GPS buiten België</name>
+		<sheet>1Dm3TJNa1CIfzQ383tTpLhxQtei0T6R1fjPT9RfmD3O0</sheet>	
+		<historycheck>1</historycheck>
+		<comparetozero>1</comparetozero>
+		<sql><![CDATA[
+			WITH t AS (
+				SELECT onderdeel.id, onderdeel.naam_pad, group_id, x, y
+				FROM gps 
+					INNER JOIN onderdeel ON gps_id = gps.id
+				WHERE x <= 2 OR x >= 7 OR y <= 49 OR y >= 52)
+			SELECT * FROM t;
+		]]></sql>
+    </report>
+	<report type="default">
+        <name>Controle kmpunten op plausibele ident8</name>
+		<sheet>1nmDotNnxbFvKDo4hTFKcrNHKrLTv42bC7Gxh94zydOo</sheet>	
+		<historycheck>1</historycheck>
+		<comparetozero>1</comparetozero>
+		<sql><![CDATA[
+			WITH t AS (
+				SELECT ident8 SIMILAR TO '[ABNRT]\d{6}[12]' AS ident8_ok, ident8, naam_pad, weg, kmvan, kmtot, zijde_weg
+				FROM instalkmp 
+					LEFT JOIN onderdeel ON onderdeel_id = onderdeel.id 
+				WHERE onderdeel.status = 'A' AND onderdeel.dtype <> 1)
+			SELECT * FROM t 
+			WHERE ident8_ok = FALSE ORDER BY naam_pad;
+		]]></sql>
+    </report>
+	<report type="default">
+        <name>[Legacy] Onderdelen/Bezoeken/Oproepen zonder toezichter</name>
+		<sheet>1icVO-8rU62HBeuwDt5go7Ks12aF0VVVx4MreVWyi534</sheet>	
+		<historycheck>1</historycheck>
+		<comparetozero>1</comparetozero>
+		<sql><![CDATA[
+			WITH oproep_zonder_toezichter AS (
+				SELECT id, 'oproep'::text AS type
+				FROM oproep 
+				WHERE status = 'A' AND toezichter_ref IS NULL AND creatie_datum > '2018-01-01'),
+			onderdelen_zonder_toezichter AS (
+				SELECT id, 'onderdeel'::text AS type
+				FROM onderdeel 
+				WHERE status = 'A' AND tech_toezichter_ref IS NULL),
+			bezoek_zonder_toezichter AS ( 
+				SELECT bezoek.id, 'bezoek'::text AS type
+				FROM bezoek 
+					LEFT JOIN onderdeel ON onderdeel.id = bezoek.onderdeel_id 
+				WHERE bezoek.status = 'A'  AND tech_toezichter_ref IS NULL)
+			SELECT * FROM oproep_zonder_toezichter
+			UNION ALL
+			SELECT * FROM onderdelen_zonder_toezichter
+			UNION ALL
+			SELECT * FROM bezoek_zonder_toezichter;
+		]]></sql>
+    </report>
+	</report>
+		<report type="default">
+        <name>Detaillijst rapport datakwaliteit onderdelen</name>
+		<sheet>"1WOFTjDsySE50Miyklq7Ozwi07ik6N12jarRPSYU6YCQ</sheet>
+		<maxsheets>1</maxsheets>		
+		<historycheck>1</historycheck>
+		<comparehigher>1</comparehigher>
+		<sql><![CDATA[
+			WITH alle_onderdelen AS (
+				SELECT id 
+				FROM onderdeel 
+				WHERE NOT dtype IN (1,88,89,90,91,92) 
+				-- INSTAL + wegsegmenten
+					AND onderdeel.status = 'A'),
+			recentste_onderdeel_bestek AS (
+				SELECT recente_data.*, onderdeel_set.besteklot_ref 
+				FROM (
+					SELECT onderdeel_ref, max(begin_datum) AS recent_datum 
+					FROM onderdeel_set
+					WHERE begin_datum < LOCALTIMESTAMP
+					GROUP BY onderdeel_ref)	AS recente_data
+				LEFT JOIN onderdeel_set ON onderdeel_set.onderdeel_ref = recente_data.onderdeel_ref AND onderdeel_set.begin_datum = recente_data.recent_datum),
+			alle_groep_toezichter AS (SELECT unixname, group_id FROM people_group WHERE role_id IN ('toez','am-toez') GROUP BY 1,2),
+			per_toezichter AS (SELECT unixname, array_to_string(array_agg(group_id), ', ') AS toezichtergroepen FROM alle_groep_toezichter GROUP BY 1),
+			detaillijst AS (SELECT 
+				CASE WHEN toezichtergroepen LIKE '%' || onderdeel.group_id || '%' THEN 1 ELSE 0 END AS correcte_combinatie_toezichter_toezichtgroep
+				,(CASE 
+					-- standaard wanneer beheerder_bh_ref een district is, zou beheerder_wa_ref de bijhorende provincie moeten zijn
+					WHEN beheerder_bh_ref IN ('112','114','121','123','125') THEN CASE WHEN beheerder_wa_ref = ('AWV-AN') THEN 1 ELSE 0 END
+					WHEN beheerder_bh_ref IN ('211','212','213','214') THEN CASE WHEN beheerder_wa_ref = ('AWV-BN') THEN 1 ELSE 0 END
+					WHEN beheerder_bh_ref IN ('717','718','719','720') THEN CASE WHEN beheerder_wa_ref = ('AWV-LB') THEN 1 ELSE 0 END
+					WHEN beheerder_bh_ref IN ('311','311A','312','312A','313','315','316') THEN CASE WHEN beheerder_wa_ref = ('AWV-WV') THEN 1 ELSE 0 END
+					WHEN beheerder_bh_ref IN ('411','412','413','414','415') THEN CASE WHEN beheerder_wa_ref = ('AWV-OV') THEN 1 ELSE 0 END
+					-- districten die veranderd of verdwenen zijn
+					WHEN beheerder_bh_ref IN ('124','222','314','321','322', '711','712','713','715') THEN 0	
+					-- fout wanneer beheerder_wa_ref een district is of wanneer beheerder_bh_ref een provincie is, zou omgekeerd moeten zijn
+					WHEN beheerder_bh_ref IN ('AWV-AN','AWV-BN','AWV-LB','AWV-WV','AWV-OV') THEN 0
+					WHEN beheerder_wa_ref IN ('112','114','121','123','125','211','212','213','214','717','718','719','720','311','311A','312','312A','313','315','316','411','412','413','414','415') THEN 0
+					-- EM A en EM G bestaan niet meer
+					WHEN beheerder_wa_ref IN ('EMG', 'EMA') OR beheerder_bh_ref IN ('EMG', 'EMA') THEN 0
+					-- GEEN of ONBEKEND
+					WHEN beheerder_wa_ref IN ('GEEN', 'ONBEKEND') OR beheerder_bh_ref IN ('GEEN', 'ONBEKEND') THEN 0
+					-- PPS / THV
+					WHEN beheerder_bh_ref IN ('PPSNZK', 'THV_BRUGGE') THEN
+						CASE WHEN beheerder_wa_ref = beheerder_bh_ref THEN 1 ELSE 0 END
+					-- overgedragen
+					WHEN beheerder_wa_ref = beheerder_bh_ref AND
+						beheerder_bh_ref IN ('PPSNZK','HIC','BLANKEN','GDIKSM','GEMEENTE','GERAARD','GEVERG','GLIERD','GPOPER','GROESELARE','GZONNE','MERELBEKE ','OOSTENDE','OOSTKAMP','ZOTTEGEM') THEN 1			   
+					WHEN beheerder_bh_ref IN ('BLANKEN','GDIKSM','GEMEENTE','GERAARD','GEVERG','GLIERD','GPOPER','GROESELARE','GZONNE','MERELBEKE ','OOSTENDE','OOSTKAMP','ZOTTEGEM')
+					 AND (beheerder_wa_ref <> beheerder_bh_ref) THEN 0
+					-- waterwegen en zeekanaal
+					WHEN beheerder_bh_ref LIKE 'W&Z_A%' THEN CASE WHEN beheerder_wa_ref LIKE 'W&Z_A%' THEN 1 ELSE 0 END
+						-- VMM
+					WHEN beheerder_bh_ref LIKE 'VMM%' AND beheerder_wa_ref LIKE 'VMM%' THEN 1 
+						-- Maritieme Toegang
+					WHEN beheerder_bh_ref LIKE 'AMT_%' AND beheerder_wa_ref LIKE 'AMT_%' THEN 1 
+					-- anderen die okee zijn
+					WHEN beheerder_wa_ref = beheerder_bh_ref AND beheerder_bh_ref IN ('AWZ_WILL  ','AWZ-AN','BE-LEGER','BELGAC_COB','DIABOLO','DS','EMT','HIC','HAVAN','L.Oostende','L.Wevelgem','NATUUR&BOS','MBZ','MD&K','MD&K_SB','PZ5355','PZ5352','VC-ANT','VIAPASS','WDANT','WA_GENT') THEN 1
+					WHEN naam_pad = 'WEGEN' OR naam_pad LIKE 'WEGEN/WINTER%' THEN 1 
+					ELSE 0
+				END) AS correcte_combinatie_beheerder 
+				, CASE WHEN ean.ean_nummer IS NULL OR ean.ean_nummer = '' THEN 0 ELSE 1 END AS ean_ingevuld
+				, CASE WHEN gps.x IS NOT NULL AND gps.y IS NOT NULL THEN 1 ELSE 0 END AS gps_ingevuld
+				, CASE WHEN gps.x IS NOT NULL AND gps.y IS NOT NULL AND adressen.zipcode IS NOT NULL AND (adressen.straat IS NOT NULL OR adressen.site IS NOT NULL) THEN 1 ELSE 0 END AS volledige_locatie_ingevuld
+				, CASE WHEN besteklot.status = 'A' AND besteklot.eind_datum > LOCALTIMESTAMP THEN 1 ELSE 0 END AS geldig_bestek
+				, CASE WHEN besteklot.status = 'A' AND besteklot.begin_datum > LOCALTIMESTAMP + INTERVAL '-5 year' THEN 1 ELSE 0 END AS bestek_niet_te_oud
+				, onderdeel.*, besteklot.*
+				FROM alle_onderdelen
+				INNER JOIN onderdeel ON alle_onderdelen.id = onderdeel.id
+					LEFT JOIN onderdeel_type ON onderdeel.dtype = onderdeel_type.id
+					LEFT JOIN adressen ON onderdeel.adres_id  = adressen.adres_id
+					LEFT JOIN gps ON onderdeel.gps_id = gps.id
+					LEFT JOIN recentste_onderdeel_bestek ON onderdeel.id = recentste_onderdeel_bestek.onderdeel_ref
+					LEFT JOIN besteklot ON recentste_onderdeel_bestek.besteklot_ref = besteklot.id
+					LEFT JOIN aansluitingen ON onderdeel.aansluit_id = aansluitingen.id
+					LEFT JOIN ean ON ean.aansluiting_ref = aansluitingen.id
+					LEFT JOIN instalkmp ON instalkmp.onderdeel_id = onderdeel.id
+					LEFT JOIN per_toezichter ON per_toezichter.unixname = tech_toezichter_ref)
+			SELECT CASE WHEN correcte_combinatie_toezichter_toezichtgroep = 0 THEN 'fout' ELSE 'ok' END AS correcte_combinatie_toezichter_toezichtgroep
+			, CASE WHEN correcte_combinatie_beheerder = 0 THEN 'fout' ELSE 'ok' END AS correcte_combinatie_beheerder
+			, CASE WHEN ean_ingevuld = 0 THEN 'fout' ELSE 'ok' END AS ean_ingevuld
+			, CASE WHEN gps_ingevuld = 0 THEN 'fout' ELSE 'ok' END AS gps_ingevuld
+			, CASE WHEN volledige_locatie_ingevuld = 0 THEN 'fout' ELSE 'ok' END AS volledige_locatie_ingevuld
+			, CASE WHEN geldig_bestek = 0 THEN 'fout' ELSE 'ok' END AS geldig_bestek
+			, CASE WHEN bestek_niet_te_oud = 0 THEN 'fout' ELSE 'ok' END AS "bestek jonger dan 5 jaar"
+			, naam_pad, tech_toezichter_ref AS toezichter, group_id AS toezichtgroep
+			, CASE WHEN lot IS NULL THEN nummer ELSE nummer || ' lot ' || lot END AS actief_bestek
+			FROM detaillijst 
+			WHERE correcte_combinatie_toezichter_toezichtgroep = 0 OR correcte_combinatie_beheerder = 0 OR ean_ingevuld = 0 OR gps_ingevuld = 0 OR volledige_locatie_ingevuld = 0 OR geldig_bestek = 0 OR bestek_niet_te_oud = 0
+			ORDER BY naam_pad;
+		]]></sql>
+    </report>
+	<report type="default">
+        <name>Werkhuis bestekken niet gekoppeld aan abonnement</name>
+		<sheet>1QDDHbMHbKk-RhC7duozQbhELEhLZzIy4tHFUxf4xyNI</sheet>	
+		<historycheck>1</historycheck>
+		<comparetozero>1</comparetozero>
+		<sql><![CDATA[
+			WITH abo AS (
+				SELECT * 
+				FROM subscriber_besteklot 
+				WHERE subscriber_id = 182)
+			SELECT besteklot.* 
+			FROM besteklot 
+				LEFT JOIN abo ON besteklot.id = abo.besteklot_id
+			WHERE aannemer_ref IN ('WHG', 'WHW', 'WHM') AND  status <> 'P' AND abo.id IS NULL;
+		]]></sql>
+    </report>
+	<report type="default">
+        <name>Onderdelen zonder bestek</name>
+		<sheet>1EjM3cB5LYMEwiceG2iyrVpaK6ULaBwf2CsclN_JUSxo</sheet>	
+		<historycheck>1</historycheck>
+		<comparehigher>1</comparehigher>
+		<sql><![CDATA[
+			WITH abo AS (
+				SELECT * 
+				FROM subscriber_besteklot 
+				WHERE subscriber_id = 182)
+			SELECT besteklot.* 
+			FROM besteklot 
+				LEFT JOIN abo ON besteklot.id = abo.besteklot_id
+			WHERE aannemer_ref IN ('WHG', 'WHW', 'WHM') AND  status <> 'P' AND abo.id IS NULL;
+		]]></sql>
+    </report>
+</reports>
