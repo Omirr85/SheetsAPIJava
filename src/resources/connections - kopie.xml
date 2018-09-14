@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<connections>	
+    <database environment="Productie">
+		<url>localhost:5432</url>
+		<name>abbameldanext</name>
+		<user></user>
+		<password></password>
+	</database>
+</connections>
+        
